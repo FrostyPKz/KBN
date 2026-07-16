@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR เกมจับผิดรูปภาพ & โครงร่างร่างกาย</title>
+    <title>AR มินิเกมฝึกสมองและร่างกาย</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&display=swap" rel="stylesheet">
     
-    <!-- MediaPipe Holistic Library -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
@@ -25,8 +24,8 @@
             min-height: 100vh;
             overflow: hidden;
         }
-        h1 { margin: 10px 0; font-size: 28px; color: #7bed9f; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        p { margin: 0 0 20px 0; font-size: 16px; color: #ced6e0; }
+        h1 { margin: 10px 0; font-size: 28px; color: #7bed9f; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); text-align: center;}
+        p { margin: 0 0 15px 0; font-size: 16px; color: #ced6e0; text-align: center;}
         
         #gameContainer {
             position: relative;
@@ -65,16 +64,36 @@
             border-radius: 30px;
             z-index: 10;
         }
+
+        #backBtn {
+            position: absolute;
+            top: 75px;
+            left: 20px;
+            padding: 8px 16px;
+            font-size: 16px;
+            font-weight: bold;
+            font-family: 'Kanit';
+            background: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            z-index: 5;
+            display: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        #backBtn:active { transform: translateY(2px); }
     </style>
 </head>
 <body>
 
-    <h1>🏃‍♂️ AR เกมจับผิดรูปภาพ (ใช้มือสัมผัส)</h1>
-    <p>ขยับร่างกายให้อยู่ในกล้อง และใช้ "ปลายนิ้วชี้" แตะค้างที่รูปที่ไม่เข้าพวก!</p>
+    <h1 id="mainTitle">🏃‍♂️ AR ศูนย์รวมเกมฝึกสมอง</h1>
+    <p id="subTitle">ขยับร่างกายให้อยู่ในกล้อง และใช้ "ปลายนิ้วชี้" แตะค้างเพื่อเลือก</p>
 
     <div id="gameContainer">
         <video id="webcam" autoplay playsinline></video>
         <canvas id="output_canvas" width="800" height="600"></canvas>
+        <button id="backBtn" onclick="goToMenu()">◀ กลับเมนูหลัก</button>
         <div id="loading">กำลังโหลด AI กล้องจับการเคลื่อนไหว...<br><span style="font-size:16px; color:#57606f;">โปรดรอสักครู่และอนุญาตการเข้าถึงกล้อง</span></div>
     </div>
 
@@ -83,8 +102,10 @@
     const canvasElement = document.getElementById('output_canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const loadingScreen = document.getElementById('loading');
+    const backBtn = document.getElementById('backBtn');
 
-    // ============ Game Data ============
+    // ============ Global State ============
+    let gameState = 'MENU'; // 'MENU', 'SPOT', 'STROOP'
     let score = 0;
     let round = 1;
     let lives = 3;
@@ -93,12 +114,52 @@
     let hoverProgress = 0; 
     let isTransitioning = false; 
 
-    const pairs = [
-        ['🍎','🍅'], ['🐶','🐻'], ['☀️','⭐'], 
-        ['🚗','🚕'], ['⚽','🏀'], ['🍉','🍓']
-    ];
+    // ============ Game 1: Spot the Difference Data ============
+    const pairs = [['🍎','🍅'], ['🐶','🐻'], ['☀️','⭐'], ['🚗','🚕'], ['⚽','🏀'], ['🍉','🍓']];
 
-    function generateLevel() {
+    // ============ Game 2: Stroop Data ============
+    const colorOptions = [
+        { name: 'แดง', hex: '#ff4757' }, { name: 'เขียว', hex: '#2ed573' },
+        { name: 'น้ำเงิน', hex: '#1e90ff' }, { name: 'เหลือง', hex: '#ffa502' }
+    ];
+    let currentTargetWord = null;
+    let currentTargetColor = null;
+
+    // ============ Navigation ============
+    function goToMenu() {
+        gameState = 'MENU';
+        backBtn.style.display = 'none';
+        document.getElementById('mainTitle').innerText = '🏃‍♂️ AR ศูนย์รวมเกมฝึกสมอง';
+        document.getElementById('subTitle').innerText = 'ขยับร่างกายให้อยู่ในกล้อง และใช้ "ปลายนิ้วชี้" แตะค้างเพื่อเลือกเกม';
+        generateMenu();
+    }
+
+    function startGame(type) {
+        gameState = type;
+        score = 0;
+        round = 1;
+        lives = 3;
+        backBtn.style.display = 'block';
+        if(type === 'SPOT') {
+            document.getElementById('mainTitle').innerText = '🔍 เกมจับผิดรูปภาพ';
+            document.getElementById('subTitle').innerText = 'แตะค้างที่รูปที่ไม่เข้าพวก';
+            generateSpotLevel();
+        } else if(type === 'STROOP') {
+            document.getElementById('mainTitle').innerText = '🌈 Stroop Test (แยกประสาทสี)';
+            document.getElementById('subTitle').innerText = 'เลือกคำตอบให้ตรงกับ "สี" ของโจทย์';
+            generateStroopLevel();
+        }
+    }
+
+    // ============ Level Generators ============
+    function generateMenu() {
+        gridItems = [
+            { id: 'SPOT', x: 250, y: 300, radius: 90, text: '🔍\nจับผิดรูป' },
+            { id: 'STROOP', x: 550, y: 300, radius: 90, text: '🌈\nStroop Test' }
+        ];
+    }
+
+    function generateSpotLevel() {
         gridItems = [];
         let gridSize = round <= 2 ? 2 : (round <= 5 ? 3 : 4); 
         let pair = pairs[Math.floor(Math.random() * pairs.length)];
@@ -110,19 +171,31 @@
         for (let row = 0; row < gridSize; row++) {
             for (let col = 0; col < gridSize; col++) {
                 let i = row * gridSize + col;
-                let isOdd = (i === oddIndex);
-                let text = isOdd ? pair[1] : pair[0];
-                
-                let cx = (col * cellW) + (cellW / 2);
-                let cy = (row * cellH) + (cellH / 2);
-
                 gridItems.push({
-                    x: cx, y: cy,
+                    x: (col * cellW) + (cellW / 2), 
+                    y: (row * cellH) + (cellH / 2) + 20, // ขยับลงนิดนึงหลบ UI
                     radius: Math.min(cellW, cellH) * 0.35,
-                    text: text,
-                    isOdd: isOdd
+                    text: i === oddIndex ? pair[1] : pair[0],
+                    isOdd: (i === oddIndex)
                 });
             }
+        }
+    }
+
+    function generateStroopLevel() {
+        gridItems = [];
+        currentTargetWord = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+        currentTargetColor = colorOptions[Math.floor(Math.random() * colorOptions.length)];
+
+        let shuffledColors = [...colorOptions].sort(() => Math.random() - 0.5);
+        let positions = [ { x: 250, y: 360 }, { x: 550, y: 360 }, { x: 250, y: 500 }, { x: 550, y: 500 } ];
+
+        for (let i = 0; i < 4; i++) {
+            gridItems.push({
+                x: positions[i].x, y: positions[i].y, radius: 60,
+                colorData: shuffledColors[i],
+                isCorrect: (shuffledColors[i].hex === currentTargetColor.hex)
+            });
         }
     }
 
@@ -131,218 +204,180 @@
         return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
     }});
     holistic.setOptions({
-        modelComplexity: 1, 
-        smoothLandmarks: true,
-        enableSegmentation: false,
-        refineFaceLandmarks: false,
-        minDetectionConfidence: 0.5,
-        minTrackingConfidence: 0.5
+        modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5
     });
-
     holistic.onResults(onResults);
 
     const camera = new Camera(videoElement, {
-        onFrame: async () => {
-            await holistic.send({image: videoElement});
-        },
-        width: 800,
-        height: 600
+        onFrame: async () => { await holistic.send({image: videoElement}); },
+        width: 800, height: 600
     });
     camera.start();
 
     function onResults(results) {
         if(loadingScreen.style.display !== 'none') {
             loadingScreen.style.display = 'none';
-            generateLevel(); 
+            goToMenu(); 
         }
 
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
         
-        // 1. วาดภาพกล้องแบบกระจก
+        // วาดภาพกล้องและร่างกาย
         canvasCtx.scale(-1, 1);
         canvasCtx.translate(-canvasElement.width, 0);
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-        // 2. วาดโครงร่างร่างกาย (Pose) ทั้งตัว เตรียมไว้สำหรับทำท่าออกกำลังกาย
         if (results.poseLandmarks) {
-            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#44bd32', lineWidth: 4}); // เส้นสีเขียว
-            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#fbc531', lineWidth: 2, radius: 3}); // จุดข้อต่อสีเหลือง
+            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#44bd32', lineWidth: 4}); 
+            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#fbc531', lineWidth: 2, radius: 3}); 
         }
+        if (results.rightHandLandmarks) drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
+        if (results.leftHandLandmarks) drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
+        canvasCtx.restore(); 
 
-        // 3. วาดโครงร่างมือ (เพื่อให้เห็นชัดเจนเวลากำมือกางมือ)
-        if (results.rightHandLandmarks) {
-            drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
-        } 
-        if (results.leftHandLandmarks) {
-            drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
-        }
-
-        canvasCtx.restore(); // คืนค่าแกนพิกัดกลับมาเป็นปกติ
-
-        // --- ดึงพิกัด "ปลายนิ้วชี้" แค่มือเดียว (เลือกรองรับขวาก่อนซ้าย) สำหรับเล่นเกม ---
+        // ดึงพิกัดนิ้วชี้มือเดียว
         let activeFinger = null;
-        const getMirroredCoords = (landmark) => {
-            return {
-                x: (1 - landmark.x) * canvasElement.width,
-                y: landmark.y * canvasElement.height
-            };
-        };
+        const getMirroredCoords = (landmark) => ({ x: (1 - landmark.x) * canvasElement.width, y: landmark.y * canvasElement.height });
 
-        if (results.rightHandLandmarks) {
-            activeFinger = getMirroredCoords(results.rightHandLandmarks[8]); // นิ้วชี้ขวา
-        } else if (results.leftHandLandmarks) {
-            activeFinger = getMirroredCoords(results.leftHandLandmarks[8]); // นิ้วชี้ซ้าย
-        } else if (results.poseLandmarks) {
-            // สำรองกรณีเห็นแต่แขนจากระยะไกล
-            if (results.poseLandmarks[20].visibility > 0.5) {
-                activeFinger = getMirroredCoords(results.poseLandmarks[20]);
-            } else if (results.poseLandmarks[19].visibility > 0.5) {
-                activeFinger = getMirroredCoords(results.poseLandmarks[19]);
-            }
+        if (results.rightHandLandmarks) activeFinger = getMirroredCoords(results.rightHandLandmarks[8]); 
+        else if (results.leftHandLandmarks) activeFinger = getMirroredCoords(results.leftHandLandmarks[8]); 
+        else if (results.poseLandmarks) {
+            if (results.poseLandmarks[20].visibility > 0.5) activeFinger = getMirroredCoords(results.poseLandmarks[20]);
+            else if (results.poseLandmarks[19].visibility > 0.5) activeFinger = getMirroredCoords(results.poseLandmarks[19]);
         }
 
-        drawGameUI();
+        // Render ตาม State ปัจจุบัน
+        if (gameState !== 'MENU') drawGameUI();
+        if (lives <= 0 && gameState !== 'MENU') { drawGameOver(); return; }
 
-        if (lives <= 0) {
-            drawGameOver();
-            return;
-        }
+        if (gameState === 'STROOP' && !isTransitioning) drawStroopQuestion();
 
         if (isTransitioning) return;
 
         let currentHover = null;
 
-        // วาดรูปภาพ (ปรับสีพื้นหลังให้ทึบและใส่เงา)
+        // วาด Item (เมนู หรือ ปุ่มเกม)
         for (let item of gridItems) {
-            canvasCtx.beginPath();
-            canvasCtx.arc(item.x, item.y, item.radius, 0, 2 * Math.PI);
-            
-            canvasCtx.fillStyle = '#ffffff'; 
-            canvasCtx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-            canvasCtx.shadowBlur = 10;
-            canvasCtx.shadowOffsetX = 2;
-            canvasCtx.shadowOffsetY = 4;
-            canvasCtx.fill();
-            
-            canvasCtx.shadowColor = 'transparent';
-            canvasCtx.lineWidth = 4;
-            canvasCtx.strokeStyle = '#dfe4ea';
-            canvasCtx.stroke();
-            
-            canvasCtx.font = `${item.radius}px Arial`;
-            canvasCtx.textAlign = 'center';
-            canvasCtx.textBaseline = 'middle';
-            canvasCtx.fillText(item.text, item.x, item.y);
-
-            // เช็คการชนกันกับปลายนิ้ว (แค่นิ้วเดียว)
-            if (activeFinger) {
-                let dist = Math.hypot(activeFinger.x - item.x, activeFinger.y - item.y);
-                if (dist < item.radius) {
-                    currentHover = item;
-                }
+            drawItem(item);
+            if (activeFinger && Math.hypot(activeFinger.x - item.x, activeFinger.y - item.y) < item.radius) {
+                currentHover = item;
             }
         }
 
-        // วาดเป้าเล็งที่ปลายนิ้ว
+        // วาดเป้าเล็งที่นิ้ว
         if (activeFinger) {
             canvasCtx.beginPath();
             canvasCtx.arc(activeFinger.x, activeFinger.y, 15, 0, 2 * Math.PI);
             canvasCtx.fillStyle = 'rgba(255, 71, 87, 0.9)';
             canvasCtx.fill();
-            canvasCtx.lineWidth = 3;
-            canvasCtx.strokeStyle = '#ffffff';
-            canvasCtx.stroke();
+            canvasCtx.lineWidth = 3; canvasCtx.strokeStyle = '#ffffff'; canvasCtx.stroke();
         }
 
-        // ระบบการชี้ค้าง (Hover)
+        // ระบบ Hover-to-click
         if (currentHover) {
             if (hoverTarget === currentHover) {
                 hoverProgress += 3; 
-                if (hoverProgress >= 100) {
-                    handleSelection(currentHover);
-                    hoverProgress = 0;
-                    currentHover = null;
-                }
-            } else {
-                hoverTarget = currentHover;
-                hoverProgress = 0;
-            }
+                if (hoverProgress >= 100) { handleSelection(currentHover); hoverProgress = 0; currentHover = null; }
+            } else { hoverTarget = currentHover; hoverProgress = 0; }
 
             if (hoverTarget) {
                 canvasCtx.beginPath();
                 canvasCtx.arc(hoverTarget.x, hoverTarget.y, hoverTarget.radius + 15, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * (hoverProgress / 100)));
-                canvasCtx.lineWidth = 12;
-                canvasCtx.strokeStyle = '#1e90ff';
-                canvasCtx.stroke();
+                canvasCtx.lineWidth = 10; canvasCtx.strokeStyle = '#1e90ff'; canvasCtx.stroke();
             }
-        } else {
-            hoverTarget = null;
-            hoverProgress = 0;
+        } else { hoverTarget = null; hoverProgress = 0; }
+    }
+
+    // ============ Rendering Helpers ============
+    function drawItem(item) {
+        canvasCtx.beginPath();
+        canvasCtx.arc(item.x, item.y, item.radius, 0, 2 * Math.PI);
+        
+        // ทุกปุ่มใช้พื้นหลังสีขาวหมด ตามที่คุณขอ (เอาสีพื้นหลังออก)
+        canvasCtx.fillStyle = '#ffffff'; 
+        canvasCtx.shadowColor = 'rgba(0, 0, 0, 0.4)'; canvasCtx.shadowBlur = 10; canvasCtx.shadowOffsetX = 2; canvasCtx.shadowOffsetY = 4;
+        canvasCtx.fill();
+        canvasCtx.shadowColor = 'transparent'; canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = '#dfe4ea'; canvasCtx.stroke();
+
+        if (gameState === 'MENU') {
+            let lines = item.text.split('\n');
+            canvasCtx.fillStyle = '#2f3542'; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
+            canvasCtx.font = '36px Arial'; canvasCtx.fillText(lines[0], item.x, item.y - 15);
+            canvasCtx.font = 'bold 22px Kanit'; canvasCtx.fillText(lines[1], item.x, item.y + 25);
+        } else if (gameState === 'SPOT') {
+            canvasCtx.font = `${item.radius}px Arial`; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
+            canvasCtx.fillText(item.text, item.x, item.y);
+        } else if (gameState === 'STROOP') {
+            // ใช้ตัวหนังสือสีดำเข้ม เพื่อให้ผู้เล่นต้องอ่านคำ ไม่ใช่จำสีพื้น
+            canvasCtx.fillStyle = '#2f3542';
+            canvasCtx.font = 'bold 28px Kanit'; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
+            canvasCtx.fillText(item.colorData.name, item.x, item.y);
         }
     }
 
+    function drawStroopQuestion() {
+        canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.9)'; canvasCtx.fillRect(200, 90, 400, 120);
+        canvasCtx.lineWidth = 4; canvasCtx.strokeStyle = '#2f3542'; canvasCtx.strokeRect(200, 90, 400, 120);
+
+        canvasCtx.fillStyle = '#2f3542'; canvasCtx.font = 'bold 20px Kanit'; canvasCtx.textAlign = 'center';
+        canvasCtx.fillText('เลือกคำตอบให้ตรงกับ "สี" ของตัวอักษรนี้', canvasElement.width / 2, 120);
+
+        // สีของคำใบ้ (Stroop text)
+        canvasCtx.fillStyle = currentTargetColor.hex; 
+        canvasCtx.font = 'bold 60px Kanit';
+        canvasCtx.lineWidth = 2; canvasCtx.strokeStyle = '#000000';
+        canvasCtx.strokeText(currentTargetWord.name, canvasElement.width / 2, 180);
+        canvasCtx.fillText(currentTargetWord.name, canvasElement.width / 2, 180);
+    }
+
+    // ============ Logic Helpers ============
     function handleSelection(item) {
+        if (gameState === 'MENU') {
+            startGame(item.id);
+            return;
+        }
+
         isTransitioning = true;
-        if (item.isOdd) {
+        let isCorrect = (gameState === 'SPOT') ? item.isOdd : item.isCorrect;
+
+        if (isCorrect) {
             score += 10;
-            drawFeedback(item.x, item.y, '✅ ถูกต้อง!', '#2ed573');
-            setTimeout(() => {
-                round++;
-                generateLevel();
-                isTransitioning = false;
-            }, 1000);
+            drawFeedback(canvasElement.width/2, 300, '✨ ถูกต้อง!', '#2ed573');
+            setTimeout(() => { round++; (gameState === 'SPOT') ? generateSpotLevel() : generateStroopLevel(); isTransitioning = false; }, 1000);
         } else {
             lives--;
-            drawFeedback(item.x, item.y, '❌ ผิดจ้า!', '#ff4757');
-            setTimeout(() => {
-                isTransitioning = false;
-            }, 1000);
+            drawFeedback(canvasElement.width/2, 300, '❌ ผิดจ้า!', '#ff4757');
+            setTimeout(() => { isTransitioning = false; }, 1000);
         }
     }
 
     function drawFeedback(x, y, text, color) {
-        canvasCtx.fillStyle = color;
-        canvasCtx.font = 'bold 45px Kanit';
-        canvasCtx.textAlign = 'center';
-        
-        canvasCtx.shadowColor = 'rgba(0,0,0,0.8)';
-        canvasCtx.shadowBlur = 5;
-        canvasCtx.fillText(text, x, y - 60);
-        canvasCtx.shadowColor = 'transparent';
+        canvasCtx.fillStyle = color; canvasCtx.font = 'bold 60px Kanit'; canvasCtx.textAlign = 'center';
+        canvasCtx.shadowColor = 'rgba(0,0,0,0.8)'; canvasCtx.shadowBlur = 8;
+        canvasCtx.fillText(text, x, y); canvasCtx.shadowColor = 'transparent';
     }
 
     function drawGameUI() {
-        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        canvasCtx.fillRect(0, 0, canvasElement.width, 60);
-
-        canvasCtx.fillStyle = '#fff';
-        canvasCtx.font = 'bold 24px Kanit';
-        canvasCtx.textAlign = 'left';
-        canvasCtx.textBaseline = 'alphabetic';
-        canvasCtx.fillText(`ด่านที่: ${round} | คะแนน: ${score}`, 20, 40);
-
+        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)'; canvasCtx.fillRect(0, 0, canvasElement.width, 60);
+        canvasCtx.fillStyle = '#fff'; canvasCtx.font = 'bold 24px Kanit'; canvasCtx.textAlign = 'left'; canvasCtx.textBaseline = 'alphabetic';
+        
+        // ขยับ Text หลบปุ่ม Back
+        canvasCtx.fillText(`ด่าน: ${round} | แต้ม: ${score}`, 160, 40);
         canvasCtx.textAlign = 'right';
         let hearts = '❤️'.repeat(Math.max(lives, 0)) + '🖤'.repeat(3 - Math.max(lives, 0));
         canvasCtx.fillText(`พลังชีวิต: ${hearts}`, canvasElement.width - 20, 40);
     }
 
     function drawGameOver() {
-        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.85)';
-        canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
-        
-        canvasCtx.fillStyle = '#ff4757';
-        canvasCtx.font = 'bold 60px Kanit';
-        canvasCtx.textAlign = 'center';
+        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.85)'; canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
+        canvasCtx.fillStyle = '#ff4757'; canvasCtx.font = 'bold 60px Kanit'; canvasCtx.textAlign = 'center';
         canvasCtx.fillText('💥 จบเกม!', canvasElement.width / 2, canvasElement.height / 2 - 20);
-        
-        canvasCtx.fillStyle = '#fff';
-        canvasCtx.font = 'bold 30px Kanit';
+        canvasCtx.fillStyle = '#fff'; canvasCtx.font = 'bold 30px Kanit';
         canvasCtx.fillText(`คุณทำได้ทั้งหมด ${score} คะแนน`, canvasElement.width / 2, canvasElement.height / 2 + 40);
         
-        canvasCtx.fillStyle = '#1e90ff';
-        canvasCtx.font = '24px Kanit';
-        canvasCtx.fillText('รีเฟรชหน้าเว็บ (F5) เพื่อเริ่มเล่นใหม่', canvasElement.width / 2, canvasElement.height / 2 + 100);
+        // ให้กลับเมนูเมื่อตาย
+        setTimeout(() => { goToMenu(); }, 3000); 
     }
 </script>
 </body>

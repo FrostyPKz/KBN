@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR เกมจับผิดรูปภาพ - ขยับตัวเพื่อเล่น</title>
+    <title>AR เกมจับผิดรูปภาพ & โครงร่างร่างกาย</title>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;600;800&display=swap" rel="stylesheet">
     
+    <!-- MediaPipe Holistic Library -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
@@ -39,7 +40,6 @@
             border: 4px solid #fff;
         }
 
-        /* ซ่อนวิดีโอต้นฉบับ เพราะเราจะวาดมันลงบน Canvas แทน */
         #webcam { display: none; }
         
         #output_canvas {
@@ -88,20 +88,19 @@
     let score = 0;
     let round = 1;
     let lives = 3;
-    let gridItems = []; // เก็บตำแหน่งของรูปภาพบนจอ
-    let hoverTarget = null; // เป้าหมายที่มือกำลังชี้อยู่
-    let hoverProgress = 0; // ความคืบหน้าในการชี้ค้าง (0 ถึง 100)
-    let isTransitioning = false; // ล็อกสถานะตอนเปลี่ยนด่าน
+    let gridItems = []; 
+    let hoverTarget = null; 
+    let hoverProgress = 0; 
+    let isTransitioning = false; 
 
     const pairs = [
         ['🍎','🍅'], ['🐶','🐻'], ['☀️','⭐'], 
         ['🚗','🚕'], ['⚽','🏀'], ['🍉','🍓']
     ];
 
-    // สร้างด่านใหม่
     function generateLevel() {
         gridItems = [];
-        let gridSize = round <= 2 ? 2 : (round <= 5 ? 3 : 4); // ขนาด Grid 2x2, 3x3, 4x4
+        let gridSize = round <= 2 ? 2 : (round <= 5 ? 3 : 4); 
         let pair = pairs[Math.floor(Math.random() * pairs.length)];
         let oddIndex = Math.floor(Math.random() * (gridSize * gridSize));
 
@@ -114,13 +113,12 @@
                 let isOdd = (i === oddIndex);
                 let text = isOdd ? pair[1] : pair[0];
                 
-                // คำนวณจุดกึ่งกลางของแต่ละช่อง
                 let cx = (col * cellW) + (cellW / 2);
                 let cy = (row * cellH) + (cellH / 2);
 
                 gridItems.push({
                     x: cx, y: cy,
-                    radius: Math.min(cellW, cellH) * 0.35, // ขนาดรัศมีของการสัมผัส
+                    radius: Math.min(cellW, cellH) * 0.35,
                     text: text,
                     isOdd: isOdd
                 });
@@ -133,7 +131,7 @@
         return `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`;
     }});
     holistic.setOptions({
-        modelComplexity: 1, // 0-2 (1 คือสมดุลระหว่างความแม่นยำและความเร็ว)
+        modelComplexity: 1, 
         smoothLandmarks: true,
         enableSegmentation: false,
         refineFaceLandmarks: false,
@@ -152,39 +150,38 @@
     });
     camera.start();
 
-    // ฟังก์ชันวาดเกมทับลงบนภาพจากกล้อง
     function onResults(results) {
-        // ปิดหน้าจอโหลดเมื่อ AI ทำงานแล้ว
         if(loadingScreen.style.display !== 'none') {
             loadingScreen.style.display = 'none';
-            generateLevel(); // เริ่มเกมด่านแรก
+            generateLevel(); 
         }
 
-        // --- 1. วาดวิดีโอแบบกลับซ้ายขวา (กระจกเงา) ---
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+        
+        // 1. วาดภาพกล้องแบบกระจก
         canvasCtx.scale(-1, 1);
         canvasCtx.translate(-canvasElement.width, 0);
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-        // --- 2. วาดโครงร่างร่างกาย (Pose & Hands) ---
+        // 2. วาดโครงร่างร่างกาย (Pose) ทั้งตัว เตรียมไว้สำหรับทำท่าออกกำลังกาย
         if (results.poseLandmarks) {
-            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
-            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#FF0000', lineWidth: 2, radius: 2});
+            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#44bd32', lineWidth: 4}); // เส้นสีเขียว
+            drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#fbc531', lineWidth: 2, radius: 3}); // จุดข้อต่อสีเหลือง
         }
+
+        // 3. วาดโครงร่างมือ (เพื่อให้เห็นชัดเจนเวลากำมือกางมือ)
         if (results.rightHandLandmarks) {
             drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
-        }
+        } 
         if (results.leftHandLandmarks) {
             drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
         }
 
-        canvasCtx.restore(); // คืนค่าแกนพิกัดกลับมาเป็นปกติเพื่อวาด UI (ไม่กลับซ้ายขวาแล้ว)
+        canvasCtx.restore(); // คืนค่าแกนพิกัดกลับมาเป็นปกติ
 
-        // --- 3. ดึงพิกัด "ปลายนิ้วชี้" (Index Finger Tip) ---
-        let fingers = [];
-        
-        // ฟังก์ชันช่วยแปลงพิกัด (ต้องกลับค่า X เพราะเราพลิกกล้องให้เป็นกระจก)
+        // --- ดึงพิกัด "ปลายนิ้วชี้" แค่มือเดียว (เลือกรองรับขวาก่อนซ้าย) สำหรับเล่นเกม ---
+        let activeFinger = null;
         const getMirroredCoords = (landmark) => {
             return {
                 x: (1 - landmark.x) * canvasElement.width,
@@ -192,23 +189,19 @@
             };
         };
 
-        // ตรวจจับนิ้วชี้ซ้าย (Landmark 8)
-        if (results.leftHandLandmarks) {
-            fingers.push(getMirroredCoords(results.leftHandLandmarks[8]));
-        } else if (results.poseLandmarks) {
-             // สำรอง: ถ้าไม่เจอมือ ให้ใช้ข้อมือ/นิ้วจาก Pose แทน (Landmark 19 = นิ้วชี้ซ้าย)
-            fingers.push(getMirroredCoords(results.poseLandmarks[19]));
-        }
-
-        // ตรวจจับนิ้วชี้ขวา
         if (results.rightHandLandmarks) {
-            fingers.push(getMirroredCoords(results.rightHandLandmarks[8]));
+            activeFinger = getMirroredCoords(results.rightHandLandmarks[8]); // นิ้วชี้ขวา
+        } else if (results.leftHandLandmarks) {
+            activeFinger = getMirroredCoords(results.leftHandLandmarks[8]); // นิ้วชี้ซ้าย
         } else if (results.poseLandmarks) {
-            // สำรอง: Landmark 20 = นิ้วชี้ขวา
-            fingers.push(getMirroredCoords(results.poseLandmarks[20]));
+            // สำรองกรณีเห็นแต่แขนจากระยะไกล
+            if (results.poseLandmarks[20].visibility > 0.5) {
+                activeFinger = getMirroredCoords(results.poseLandmarks[20]);
+            } else if (results.poseLandmarks[19].visibility > 0.5) {
+                activeFinger = getMirroredCoords(results.poseLandmarks[19]);
+            }
         }
 
-        // --- 4. วาด UI เกมจับผิดภาพ ---
         drawGameUI();
 
         if (lives <= 0) {
@@ -216,19 +209,25 @@
             return;
         }
 
-        if (isTransitioning) return; // ไม่ประมวลผลการกดช่วงสลับด่าน
+        if (isTransitioning) return;
 
-        // --- 5. ตรวจจับการชนกัน (Collision Detection) ---
         let currentHover = null;
 
+        // วาดรูปภาพ (ปรับสีพื้นหลังให้ทึบและใส่เงา)
         for (let item of gridItems) {
-            // วาดวงกลมพื้นหลังและ Emoji
             canvasCtx.beginPath();
             canvasCtx.arc(item.x, item.y, item.radius, 0, 2 * Math.PI);
-            canvasCtx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            
+            canvasCtx.fillStyle = '#ffffff'; 
+            canvasCtx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+            canvasCtx.shadowBlur = 10;
+            canvasCtx.shadowOffsetX = 2;
+            canvasCtx.shadowOffsetY = 4;
             canvasCtx.fill();
+            
+            canvasCtx.shadowColor = 'transparent';
             canvasCtx.lineWidth = 4;
-            canvasCtx.strokeStyle = '#fff';
+            canvasCtx.strokeStyle = '#dfe4ea';
             canvasCtx.stroke();
             
             canvasCtx.font = `${item.radius}px Arial`;
@@ -236,25 +235,30 @@
             canvasCtx.textBaseline = 'middle';
             canvasCtx.fillText(item.text, item.x, item.y);
 
-            // เช็คว่านิ้วไหนชี้โดนรูปนี้บ้าง
-            for (let f of fingers) {
-                let dist = Math.hypot(f.x - item.x, f.y - item.y);
+            // เช็คการชนกันกับปลายนิ้ว (แค่นิ้วเดียว)
+            if (activeFinger) {
+                let dist = Math.hypot(activeFinger.x - item.x, activeFinger.y - item.y);
                 if (dist < item.radius) {
                     currentHover = item;
                 }
-                // วาดเป้าเล็งที่ปลายนิ้ว
-                canvasCtx.beginPath();
-                canvasCtx.arc(f.x, f.y, 15, 0, 2 * Math.PI);
-                canvasCtx.fillStyle = 'rgba(255, 71, 87, 0.8)';
-                canvasCtx.fill();
-                canvasCtx.stroke();
             }
         }
 
-        // --- 6. ระบบการชี้ค้าง (Hover to Click) ---
+        // วาดเป้าเล็งที่ปลายนิ้ว
+        if (activeFinger) {
+            canvasCtx.beginPath();
+            canvasCtx.arc(activeFinger.x, activeFinger.y, 15, 0, 2 * Math.PI);
+            canvasCtx.fillStyle = 'rgba(255, 71, 87, 0.9)';
+            canvasCtx.fill();
+            canvasCtx.lineWidth = 3;
+            canvasCtx.strokeStyle = '#ffffff';
+            canvasCtx.stroke();
+        }
+
+        // ระบบการชี้ค้าง (Hover)
         if (currentHover) {
             if (hoverTarget === currentHover) {
-                hoverProgress += 3; // ความเร็วในการหลอดเต็ม
+                hoverProgress += 3; 
                 if (hoverProgress >= 100) {
                     handleSelection(currentHover);
                     hoverProgress = 0;
@@ -265,11 +269,10 @@
                 hoverProgress = 0;
             }
 
-            // วาดหลอด Loading วงกลมรอบๆ รูปที่กำลังชี้
             if (hoverTarget) {
                 canvasCtx.beginPath();
-                canvasCtx.arc(hoverTarget.x, hoverTarget.y, hoverTarget.radius + 10, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * (hoverProgress / 100)));
-                canvasCtx.lineWidth = 10;
+                canvasCtx.arc(hoverTarget.x, hoverTarget.y, hoverTarget.radius + 15, -Math.PI / 2, (-Math.PI / 2) + (Math.PI * 2 * (hoverProgress / 100)));
+                canvasCtx.lineWidth = 12;
                 canvasCtx.strokeStyle = '#1e90ff';
                 canvasCtx.stroke();
             }
@@ -279,11 +282,9 @@
         }
     }
 
-    // จัดการเมื่อผู้เล่นเลือกรูป
     function handleSelection(item) {
-        isTransitioning = true; // ล็อกเกมชั่วคราว
+        isTransitioning = true;
         if (item.isOdd) {
-            // ตอบถูก
             score += 10;
             drawFeedback(item.x, item.y, '✅ ถูกต้อง!', '#2ed573');
             setTimeout(() => {
@@ -292,7 +293,6 @@
                 isTransitioning = false;
             }, 1000);
         } else {
-            // ตอบผิด
             lives--;
             drawFeedback(item.x, item.y, '❌ ผิดจ้า!', '#ff4757');
             setTimeout(() => {
@@ -301,32 +301,34 @@
         }
     }
 
-    // วาดข้อความผลลัพธ์
     function drawFeedback(x, y, text, color) {
         canvasCtx.fillStyle = color;
-        canvasCtx.font = 'bold 40px Kanit';
+        canvasCtx.font = 'bold 45px Kanit';
         canvasCtx.textAlign = 'center';
-        canvasCtx.fillText(text, x, y - 50);
+        
+        canvasCtx.shadowColor = 'rgba(0,0,0,0.8)';
+        canvasCtx.shadowBlur = 5;
+        canvasCtx.fillText(text, x, y - 60);
+        canvasCtx.shadowColor = 'transparent';
     }
 
-    // วาด UI ด้านบน (คะแนน / ชีวิต)
     function drawGameUI() {
-        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         canvasCtx.fillRect(0, 0, canvasElement.width, 60);
 
         canvasCtx.fillStyle = '#fff';
         canvasCtx.font = 'bold 24px Kanit';
         canvasCtx.textAlign = 'left';
-        canvasCtx.fillText(`ด่านที่: ${round} | คะแนน: ${score}`, 20, 38);
+        canvasCtx.textBaseline = 'alphabetic';
+        canvasCtx.fillText(`ด่านที่: ${round} | คะแนน: ${score}`, 20, 40);
 
         canvasCtx.textAlign = 'right';
         let hearts = '❤️'.repeat(Math.max(lives, 0)) + '🖤'.repeat(3 - Math.max(lives, 0));
-        canvasCtx.fillText(`พลังชีวิต: ${hearts}`, canvasElement.width - 20, 38);
+        canvasCtx.fillText(`พลังชีวิต: ${hearts}`, canvasElement.width - 20, 40);
     }
 
-    // หน้าจอจบเกม
     function drawGameOver() {
-        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.85)';
         canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
         
         canvasCtx.fillStyle = '#ff4757';

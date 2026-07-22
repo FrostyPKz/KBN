@@ -190,6 +190,10 @@
     ];
     let currentTargetWord = null; let currentTargetColor = null;
 
+    // ============ URL ของ Google Sheet (ต้องแก้ไขตรงนี้) ============
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/ใส่_URL_เว็บแอปของคุณตรงนี้/exec'; 
+    // ==========================================================
+
     // ============ Navigation ============
     function goToMenu() {
         gameState = 'MENU';
@@ -307,7 +311,7 @@
 
             if (exerciseVal === "5") {
                 if (leftHeel && leftToe && (leftHeel.visibility > 0.4 || rightHeel.visibility > 0.4)) isBodyVisible = true;
-            } else if (exerciseVal === "6" || exerciseVal === "16") { // นำ 17 ออกแล้ว
+            } else if (exerciseVal === "6" || exerciseVal === "16") {
                 if (hip && knee && leftAnkle && (knee.visibility > 0.5)) isBodyVisible = true;
             } else {
                 if (leftAnkle && rightAnkle && (leftAnkle.visibility > 0.5)) isBodyVisible = true;
@@ -335,7 +339,7 @@
                             isDown = false;
                             if (counter < target) { counter++; progressValue.innerText = counter; checkExerciseComplete(); }
                         }
-                    } else if (exerciseVal === "6" || exerciseVal === "16") { // นำ 17 ออกแล้ว
+                    } else if (exerciseVal === "6" || exerciseVal === "16") {
                         const kneeAngle = calculateAngle(hip, knee, leftAnkle);
                         if (kneeAngle < 130) isDown = true;
                         if (isDown && kneeAngle > 165) {
@@ -349,7 +353,7 @@
                     if (leftAnkle && rightAnkle) {
                         const heightDiff = Math.abs(leftAnkle.y - rightAnkle.y);
                         // ยืนทรงตัว
-                        if (heightDiff > 0.08 || exerciseVal === "12") { // นำ 10 ออกแล้ว
+                        if (heightDiff > 0.08 || exerciseVal === "12") {
                             if (!isHoldingPose) { isHoldingPose = true; startTime = Date.now(); } 
                             else {
                                 let elapsed = Math.floor((Date.now() - startTime) / 1000);
@@ -363,14 +367,10 @@
                 }
                 // โหมดนับก้าวเดิน (Steps)
                 else if (currentMode === "steps") {
-                    // คำนวณระยะห่างระหว่างข้อเท้า 2 ข้าง
                     const ankleDist = Math.hypot(leftAnkle.x - rightAnkle.x, leftAnkle.y - rightAnkle.y);
-                    
-                    // ถ้าระยะห่างกว้าง (ก้าวเท้าออก)
                     if (ankleDist > 0.15) {
                         isDown = true;
                     } 
-                    // เมื่อขยับเท้ากลับมาใกล้กันหรือสลับข้าง (ถือว่าครบ 1 ก้าว)
                     else if (isDown && ankleDist < 0.08) {
                         isDown = false;
                         if (counter < target) {
@@ -510,12 +510,43 @@
         canvasCtx.fillText(`พลังชีวิต: ${hearts}`, canvasElement.width - 20, 40);
     }
 
+    // ============ ฟังก์ชันบันทึกคะแนนลง Google Sheet ============
+    function saveScoreToGoogleSheet(newScore) {
+        // ถ้ายังไม่ได้ใส่ URL ป้องกันการ Error
+        if(GOOGLE_SHEET_URL.includes("https://script.google.com/macros/s/AKfycbx5ei2W-Wu3r-S7CX0EhSqiTSbwyMSO3l2YQCie5888cZSA9B6ElJgtpUYAG1LjldqMNg/exec")) {
+            console.warn("ยังไม่ได้ใส่ Google Sheet URL");
+            return;
+        }
+
+        const data = {
+            game: selectedGame,
+            score: newScore
+        };
+
+        fetch(GOOGLE_SHEET_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+            console.log("บันทึกคะแนนลง Google Sheet สำเร็จ!", result);
+        })
+        .catch(error => {
+            console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
+        });
+    }
+
     function drawGameOver() {
         canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.85)'; canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
         canvasCtx.fillStyle = '#ff4757'; canvasCtx.font = 'bold 60px Kanit'; canvasCtx.textAlign = 'center';
         canvasCtx.fillText('💥 จบเกม!', canvasElement.width / 2, canvasElement.height / 2 - 20);
         canvasCtx.fillStyle = '#fff'; canvasCtx.font = 'bold 30px Kanit';
         canvasCtx.fillText(`คุณทำได้ทั้งหมด ${score} คะแนน`, canvasElement.width / 2, canvasElement.height / 2 + 40);
+        
+        // เรียกใช้ฟังก์ชันส่งข้อมูลเมื่อเล่นจบ
+        saveScoreToGoogleSheet(score);
+        
         setTimeout(() => { goToMenu(); }, 3000); 
     }
 </script>

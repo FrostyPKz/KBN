@@ -115,19 +115,11 @@
 
         <div id="exerciseUI">
             <select id="exerciseSelect">
+                <!-- เหลือแค่ท่า 5, 6, 12, 16 ตามที่ระบุ -->
                 <option value="5" data-type="reps" data-target="10" selected>ท่า 5: กระดกปลายเท้าขึ้น 10 ครั้ง</option>
                 <option value="6" data-type="reps" data-target="10">ท่า 6: งอเข่าเหยียดตัวขึ้น 10 ครั้ง</option>
-                <option value="7" data-type="steps" data-target="10">ท่า 7: เดินถอยหลัง 10 ก้าว</option>
-                <option value="8" data-type="steps" data-target="10">ท่า 8: เดินเป็นรูปเลขแปด 10 รอบ</option>
-                <option value="9" data-type="steps" data-target="10">ท่า 9: เดินไปด้านข้าง 10 ก้าว</option>
-                <option value="10" data-type="time" data-target="10">ท่า 10: ยืนต่อเท้าค้างไว้ 10 วิ</option>
-                <option value="11" data-type="steps" data-target="10">ท่า 11: เดินต่อเท้า 10 ก้าว</option>
                 <option value="12" data-type="time" data-target="10">ท่า 12: ยืนขาเดียวค้างไว้ 10 วิ</option>
-                <option value="13" data-type="steps" data-target="10">ท่า 13: เดินด้วยส้นเท้า 10 ก้าว</option>
-                <option value="14" data-type="steps" data-target="10">ท่า 14: เดินด้วยนิ้วเท้า 10 ก้าว</option>
-                <option value="15" data-type="steps" data-target="10">ท่า 15: เดินต่อเท้าถอยหลัง 10 ก้าว</option>
                 <option value="16" data-type="reps" data-target="10">ท่า 16: นั่งแล้วลุกขึ้นยืน 10 ครั้ง</option>
-                <option value="17" data-type="reps" data-target="10">ท่า 17: เดินขึ้น-ลงบันได 10 ขั้น</option>
             </select>
             <div class="dashboard-box">
                 <div class="value-display" id="progressValue">0</div>
@@ -315,7 +307,7 @@
 
             if (exerciseVal === "5") {
                 if (leftHeel && leftToe && (leftHeel.visibility > 0.4 || rightHeel.visibility > 0.4)) isBodyVisible = true;
-            } else if (exerciseVal === "6" || exerciseVal === "16" || exerciseVal === "17") {
+            } else if (exerciseVal === "6" || exerciseVal === "16") { // นำ 17 ออกแล้ว
                 if (hip && knee && leftAnkle && (knee.visibility > 0.5)) isBodyVisible = true;
             } else {
                 if (leftAnkle && rightAnkle && (leftAnkle.visibility > 0.5)) isBodyVisible = true;
@@ -343,7 +335,7 @@
                             isDown = false;
                             if (counter < target) { counter++; progressValue.innerText = counter; checkExerciseComplete(); }
                         }
-                    } else if (exerciseVal === "6" || exerciseVal === "16" || exerciseVal === "17") {
+                    } else if (exerciseVal === "6" || exerciseVal === "16") { // นำ 17 ออกแล้ว
                         const kneeAngle = calculateAngle(hip, knee, leftAnkle);
                         if (kneeAngle < 130) isDown = true;
                         if (isDown && kneeAngle > 165) {
@@ -357,7 +349,7 @@
                     if (leftAnkle && rightAnkle) {
                         const heightDiff = Math.abs(leftAnkle.y - rightAnkle.y);
                         // ยืนทรงตัว
-                        if (heightDiff > 0.08 || exerciseVal === "10" || exerciseVal === "12") { 
+                        if (heightDiff > 0.08 || exerciseVal === "12") { // นำ 10 ออกแล้ว
                             if (!isHoldingPose) { isHoldingPose = true; startTime = Date.now(); } 
                             else {
                                 let elapsed = Math.floor((Date.now() - startTime) / 1000);

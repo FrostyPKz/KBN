@@ -189,7 +189,7 @@
     ];
     let currentTargetWord = null; let currentTargetColor = null;
 
-    // ============ URL ของ Google Sheet (แก้ไขเรียบร้อย พร้อมใช้งาน) ============
+    // ============ URL ของ Google Sheet ============
     const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbx5ei2W-Wu3r-S7CX0EhSqiTSbwyMSO3l2YQCie5888cZSA9B6ElJgtpUYAG1LjldqMNg/exec'; 
     // ==========================================================
 
@@ -325,7 +325,7 @@
                 instructionText.innerText = "เยี่ยมมาก! ขยับร่างกายตามท่าได้เลย";
                 instructionText.style.color = "#2e7d32";
                 
-                // โหมดนับครั้ง (Reps)
+                // โหมดนับครั้ง
                 if (currentMode === "reps") {
                     if (exerciseVal === "5") {
                         const leftFootSize = Math.hypot(leftHeel.x - leftToe.x, leftHeel.y - leftToe.y) + 0.001;
@@ -347,11 +347,10 @@
                         }
                     }
                 } 
-                // โหมดจับเวลา (Time)
+                // โหมดจับเวลา
                 else if (currentMode === "time") {
                     if (leftAnkle && rightAnkle) {
                         const heightDiff = Math.abs(leftAnkle.y - rightAnkle.y);
-                        // ยืนทรงตัว
                         if (heightDiff > 0.08 || exerciseVal === "12") {
                             if (!isHoldingPose) { isHoldingPose = true; startTime = Date.now(); } 
                             else {
@@ -367,9 +366,32 @@
             }
         }
         
-        canvasCtx.restore(); 
+        canvasCtx.restore(); // พลิกภาพกลับสำหรับการวาด UI
 
+        // ==========================================
+        // การจัดการจบเกม (GAME OVER LOGIC - แก้ไขแล้ว)
+        // ==========================================
+        if (lives <= 0 && gameState !== 'MENU' && gameState !== 'GAMEOVER') {
+            // 1. เปลี่ยน State เป็น GAMEOVER ทันที เพื่อไม่ให้เข้ามาใน if นี้ซ้ำ
+            gameState = 'GAMEOVER';
+            
+            // 2. เรียกเซฟข้อมูลแค่ 1 ครั้งถ้วน
+            saveScoreToGoogleSheet(score);
+            
+            // 3. ตั้งเวลา 3 วินาที กลับเมนูหลัก
+            setTimeout(() => { goToMenu(); }, 3000);
+        }
+
+        // ถ้าระบบอยู่ในสถานะ GAMEOVER ให้วาดหน้าจอจบเกมแล้วหยุดทำงานส่วนอื่น
+        if (gameState === 'GAMEOVER') {
+            drawGameOverScreen();
+            return;
+        }
+
+
+        // ==========================================
         // การวาด UI เกมและการจิ้ม
+        // ==========================================
         if (gameState !== 'EXERCISE') {
             let activeFinger = null;
             const getMirroredCoords = (landmark) => ({ x: (1 - landmark.x) * canvasElement.width, y: landmark.y * canvasElement.height });
@@ -382,7 +404,6 @@
             }
 
             if (gameState !== 'MENU') drawGameUI();
-            if (lives <= 0 && gameState !== 'MENU') { drawGameOver(); return; }
             if (gameState === 'STROOP' && !isTransitioning) drawStroopQuestion();
             if (isTransitioning) return;
 
@@ -464,7 +485,6 @@
 
     function handleSelection(item) {
         if (gameState === 'MENU') {
-            // เช็คว่าเลือกเมนูไหน
             if (item.id === 'OTAGO') {
                 prepareExercise();
             } else {
@@ -510,32 +530,30 @@
             game: selectedGame,
             score: newScore
         };
+        
+        console.log("กำลังส่งข้อมูล...", data);
 
         fetch(GOOGLE_SHEET_URL, {
             method: 'POST',
+            mode: 'no-cors', // ใช้โหมดนี้เพื่อไม่ให้เบราว์เซอร์บล็อก
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(data)
         })
-        .then(response => response.json())
-        .then(result => {
-            console.log("บันทึกคะแนนลง Google Sheet สำเร็จ!", result);
+        .then(() => {
+            console.log("✅ ระบบได้ทำการสั่งส่งข้อมูลไปยัง Google Sheet เรียบร้อยแล้ว!");
         })
         .catch(error => {
-            console.error("เกิดข้อผิดพลาดในการบันทึก:", error);
+            console.error("❌ เกิดข้อผิดพลาดในการส่งข้อมูล:", error);
         });
     }
 
-    function drawGameOver() {
+    // เปลี่ยนชื่อและหน้าที่จาก drawGameOver เป็นวาดหน้าจออย่างเดียว
+    function drawGameOverScreen() {
         canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.85)'; canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
         canvasCtx.fillStyle = '#ff4757'; canvasCtx.font = 'bold 60px Kanit'; canvasCtx.textAlign = 'center';
         canvasCtx.fillText('💥 จบเกม!', canvasElement.width / 2, canvasElement.height / 2 - 20);
         canvasCtx.fillStyle = '#fff'; canvasCtx.font = 'bold 30px Kanit';
         canvasCtx.fillText(`คุณทำได้ทั้งหมด ${score} คะแนน`, canvasElement.width / 2, canvasElement.height / 2 + 40);
-        
-        // ส่งคะแนนเมื่อจบเกม
-        saveScoreToGoogleSheet(score);
-        
-        setTimeout(() => { goToMenu(); }, 3000); 
     }
 </script>
 </body>

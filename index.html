@@ -115,7 +115,6 @@
 
         <div id="exerciseUI">
             <select id="exerciseSelect">
-                <!-- เหลือแค่ท่า 5, 6, 12, 16 ตามที่ระบุ -->
                 <option value="5" data-type="reps" data-target="10" selected>ท่า 5: กระดกปลายเท้าขึ้น 10 ครั้ง</option>
                 <option value="6" data-type="reps" data-target="10">ท่า 6: งอเข่าเหยียดตัวขึ้น 10 ครั้ง</option>
                 <option value="12" data-type="time" data-target="10">ท่า 12: ยืนขาเดียวค้างไว้ 10 วิ</option>
@@ -201,24 +200,23 @@
         exerciseUI.style.display = 'none';
         warningElement.style.display = 'none';
         document.getElementById('mainTitle').innerText = 'AR ประเมินการฟื้นฟู & มินิเกม';
-        document.getElementById('subTitle').innerText = 'ใช้นิ้วชี้แตะค้างเพื่อเลือกเกมที่ต้องการเล่น';
+        document.getElementById('subTitle').innerText = 'ใช้นิ้วชี้แตะค้างเพื่อเลือกตัวเลือกที่ต้องการ';
         generateMenu();
     }
 
-    function prepareExercise(type) {
-        selectedGame = type;
+    function prepareExercise() {
         gameState = 'EXERCISE';
         backBtn.style.display = 'block';
         exerciseUI.style.display = 'flex';
         selectBox.dispatchEvent(new Event('change'));
-        document.getElementById('mainTitle').innerText = 'กายภาพบำบัดปลดล็อกด่าน';
-        document.getElementById('subTitle').innerText = 'ทำท่าทางให้ครบตามเป้าหมายเพื่อเข้าสู่เกม';
+        document.getElementById('mainTitle').innerText = '🏃 ทดสอบท่ากายภาพบำบัด (Otago)';
+        document.getElementById('subTitle').innerText = 'ทำท่าทางให้ครบตามเป้าหมายที่กำหนด';
     }
 
     function startGame() {
-        gameState = selectedGame;
         exerciseUI.style.display = 'none';
         warningElement.style.display = 'none';
+        backBtn.style.display = 'block';
         score = 0; round = 1; lives = 3;
         
         if(gameState === 'SPOT') {
@@ -234,9 +232,11 @@
 
     // ============ Level Generators ============
     function generateMenu() {
+        // อัปเดตเมนูเป็น 3 ตัวเลือก แบ่งระยะห่างให้พอดี
         gridItems = [
-            { id: 'SPOT', x: 250, y: 300, radius: 90, text: '🔍\nจับผิดรูป' },
-            { id: 'STROOP', x: 550, y: 300, radius: 90, text: '🌈\nStroop Test' }
+            { id: 'SPOT', x: 200, y: 300, radius: 80, text: '🔍\nจับผิดรูป' },
+            { id: 'STROOP', x: 400, y: 300, radius: 80, text: '🌈\nStroop Test' },
+            { id: 'OTAGO', x: 600, y: 300, radius: 80, text: '🏃\nท่า Otago' }
         ];
     }
 
@@ -365,21 +365,6 @@
                         } else { isHoldingPose = false; }
                     }
                 }
-                // โหมดนับก้าวเดิน (Steps)
-                else if (currentMode === "steps") {
-                    const ankleDist = Math.hypot(leftAnkle.x - rightAnkle.x, leftAnkle.y - rightAnkle.y);
-                    if (ankleDist > 0.15) {
-                        isDown = true;
-                    } 
-                    else if (isDown && ankleDist < 0.08) {
-                        isDown = false;
-                        if (counter < target) {
-                            counter++; 
-                            progressValue.innerText = counter; 
-                            checkExerciseComplete();
-                        }
-                    }
-                }
             }
         }
         
@@ -434,11 +419,11 @@
     function checkExerciseComplete() {
         if (counter >= target) {
             isTransitioning = true;
-            instructionText.innerText = "🎉 สำเร็จ! ปลดล็อกเกมแล้ว กำลังเข้าสู่เกม...";
+            instructionText.innerText = "🎉 สำเร็จ! ทำกายภาพครบแล้ว กลับสู่เมนูหลัก...";
             instructionText.style.color = "#1e90ff";
             setTimeout(() => {
                 isTransitioning = false;
-                startGame();
+                goToMenu(); // ทำเสร็จแล้วกลับเมนูหลัก ไม่เข้าเกม
             }, 2000);
         }
     }
@@ -454,7 +439,8 @@
             let lines = item.text.split('\n');
             canvasCtx.fillStyle = '#2f3542'; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
             canvasCtx.font = '36px Arial'; canvasCtx.fillText(lines[0], item.x, item.y - 15);
-            canvasCtx.font = 'bold 22px Kanit'; canvasCtx.fillText(lines[1], item.x, item.y + 25);
+            // ปรับขนาด font เล็กน้อยเพื่อให้พอดีกับวงกลม 3 วง
+            canvasCtx.font = 'bold 20px Kanit'; canvasCtx.fillText(lines[1], item.x, item.y + 25);
         } else if (gameState === 'SPOT') {
             canvasCtx.font = `${item.radius}px Arial`; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
             canvasCtx.fillText(item.text, item.x, item.y);
@@ -479,7 +465,17 @@
     }
 
     function handleSelection(item) {
-        if (gameState === 'MENU') { prepareExercise(item.id); return; }
+        if (gameState === 'MENU') {
+            // เช็คว่าเลือกเมนูไหน
+            if (item.id === 'OTAGO') {
+                prepareExercise();
+            } else {
+                gameState = item.id;
+                selectedGame = item.id;
+                startGame();
+            }
+            return;
+        }
 
         isTransitioning = true;
         let isCorrect = (gameState === 'SPOT') ? item.isOdd : item.isCorrect;
@@ -512,7 +508,6 @@
 
     // ============ ฟังก์ชันบันทึกคะแนนลง Google Sheet ============
     function saveScoreToGoogleSheet(newScore) {
-        // ถ้ายังไม่ได้ใส่ URL ป้องกันการ Error
         if(GOOGLE_SHEET_URL.includes("https://script.google.com/macros/s/AKfycbx5ei2W-Wu3r-S7CX0EhSqiTSbwyMSO3l2YQCie5888cZSA9B6ElJgtpUYAG1LjldqMNg/exec")) {
             console.warn("ยังไม่ได้ใส่ Google Sheet URL");
             return;
@@ -544,7 +539,6 @@
         canvasCtx.fillStyle = '#fff'; canvasCtx.font = 'bold 30px Kanit';
         canvasCtx.fillText(`คุณทำได้ทั้งหมด ${score} คะแนน`, canvasElement.width / 2, canvasElement.height / 2 + 40);
         
-        // เรียกใช้ฟังก์ชันส่งข้อมูลเมื่อเล่นจบ
         saveScoreToGoogleSheet(score);
         
         setTimeout(() => { goToMenu(); }, 3000); 

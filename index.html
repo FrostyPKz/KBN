@@ -189,8 +189,8 @@
     ];
     let currentTargetWord = null; let currentTargetColor = null;
 
-    // ============ URL ของ Google Sheet (ต้องแก้ไขตรงนี้) ============
-    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/ใส่_URL_เว็บแอปของคุณตรงนี้/exec'; 
+    // ============ URL ของ Google Sheet (แก้ไขเรียบร้อย พร้อมใช้งาน) ============
+    const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbx5ei2W-Wu3r-S7CX0EhSqiTSbwyMSO3l2YQCie5888cZSA9B6ElJgtpUYAG1LjldqMNg/exec'; 
     // ==========================================================
 
     // ============ Navigation ============
@@ -232,7 +232,6 @@
 
     // ============ Level Generators ============
     function generateMenu() {
-        // อัปเดตเมนูเป็น 3 ตัวเลือก แบ่งระยะห่างให้พอดี
         gridItems = [
             { id: 'SPOT', x: 200, y: 300, radius: 80, text: '🔍\nจับผิดรูป' },
             { id: 'STROOP', x: 400, y: 300, radius: 80, text: '🌈\nStroop Test' },
@@ -439,7 +438,6 @@
             let lines = item.text.split('\n');
             canvasCtx.fillStyle = '#2f3542'; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
             canvasCtx.font = '36px Arial'; canvasCtx.fillText(lines[0], item.x, item.y - 15);
-            // ปรับขนาด font เล็กน้อยเพื่อให้พอดีกับวงกลม 3 วง
             canvasCtx.font = 'bold 20px Kanit'; canvasCtx.fillText(lines[1], item.x, item.y + 25);
         } else if (gameState === 'SPOT') {
             canvasCtx.font = `${item.radius}px Arial`; canvasCtx.textAlign = 'center'; canvasCtx.textBaseline = 'middle';
@@ -508,11 +506,6 @@
 
     // ============ ฟังก์ชันบันทึกคะแนนลง Google Sheet ============
     function saveScoreToGoogleSheet(newScore) {
-        if(GOOGLE_SHEET_URL.includes("https://script.google.com/macros/s/AKfycbx5ei2W-Wu3r-S7CX0EhSqiTSbwyMSO3l2YQCie5888cZSA9B6ElJgtpUYAG1LjldqMNg/exec")) {
-            console.warn("ยังไม่ได้ใส่ Google Sheet URL");
-            return;
-        }
-
         const data = {
             game: selectedGame,
             score: newScore
@@ -539,6 +532,7 @@
         canvasCtx.fillStyle = '#fff'; canvasCtx.font = 'bold 30px Kanit';
         canvasCtx.fillText(`คุณทำได้ทั้งหมด ${score} คะแนน`, canvasElement.width / 2, canvasElement.height / 2 + 40);
         
+        // ส่งคะแนนเมื่อจบเกม
         saveScoreToGoogleSheet(score);
         
         setTimeout(() => { goToMenu(); }, 3000); 

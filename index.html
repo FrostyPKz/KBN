@@ -19,24 +19,68 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
-            padding: 10px;
-            overflow-x: hidden;
+            height: 100vh;
+            padding: 8px;
+            overflow: hidden;
         }
         
-        .header { text-align: center; margin-bottom: 15px; }
-        .header h1 { font-size: 24px; color: #1976d2; margin-bottom: 5px; }
-        .header p { font-size: 14px; color: #555; }
+        .header { text-align: center; margin-bottom: 8px; margin-top: 5px; }
+        .header h1 { font-size: 22px; color: #1976d2; margin-bottom: 2px; }
+        .header p { font-size: 13px; color: #555; }
         
+        /* --- UI ส่วนออกกำลังกาย --- */
+        #exerciseUI {
+            width: 100%;
+            max-width: 800px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 8px 12px;
+            display: none;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        select { 
+            flex: 1 1 200px; 
+            padding: 6px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc;
+            font-family: 'Kanit'; outline: none; background: #fff;
+        }
+        
+        .dashboard-box { 
+            display: flex; 
+            align-items: baseline; 
+            gap: 10px;
+            background: #e3f2fd; 
+            padding: 6px 12px; 
+            border-radius: 6px; 
+            text-align: center; 
+        }
+        .value-display { font-size: 24px; font-weight: bold; color: #1976d2; line-height: 1; }
+        .target-text { font-size: 14px; color: #555; }
+        
+        .instruction { 
+            flex: 1 1 100%;
+            font-size: 13px; font-weight: bold; background: #fff3e0; 
+            padding: 4px; border-radius: 6px; text-align: center;
+        }
+
+        /* --- กรอบวิดีโอ --- */
         #gameWrapper {
             position: relative;
             width: 100%;
             max-width: 800px;
             aspect-ratio: 4/3;
+            max-height: calc(100vh - 130px);
             background: #000;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            margin: 0 auto;
         }
 
         #webcam { display: none; }
@@ -45,7 +89,7 @@
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            object-fit: cover;
+            object-fit: contain;
         }
 
         #loading {
@@ -57,43 +101,17 @@
         }
 
         #backBtn {
-            position: absolute; top: 15px; left: 15px;
-            padding: 8px 16px; font-size: 14px; font-weight: bold; font-family: 'Kanit';
+            position: absolute; top: 10px; left: 10px;
+            padding: 6px 12px; font-size: 13px; font-weight: bold; font-family: 'Kanit';
             background: #ff4757; color: white; border: none; border-radius: 20px;
             cursor: pointer; z-index: 5; display: none;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        /* --- UI ส่วนออกกำลังกาย --- */
-        #exerciseUI {
-            position: absolute;
-            bottom: 15px; left: 50%;
-            transform: translateX(-50%);
-            width: 90%;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 12px;
-            padding: 12px;
-            display: none;
-            flex-direction: column;
-            gap: 8px;
-            z-index: 10;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        
-        select { 
-            padding: 8px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc;
-            font-family: 'Kanit'; outline: none; background: #fff;
-        }
-        
-        .dashboard-box { background: #e3f2fd; padding: 10px; border-radius: 8px; text-align: center; }
-        .value-display { font-size: 32px; font-weight: bold; color: #1976d2; line-height: 1; }
-        .target-text { font-size: 14px; color: #555; }
-        .instruction { font-size: 13px; font-weight: bold; background: #fff3e0; padding: 6px; border-radius: 6px; text-align: center;}
-        
         #visibilityWarning {
-            position: absolute; top: 20px; right: 20px;
+            position: absolute; top: 10px; right: 10px;
             background: rgba(211, 47, 47, 0.9); color: white;
-            padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold;
+            padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold;
             display: none; z-index: 15;
         }
     </style>
@@ -105,6 +123,29 @@
         <p id="subTitle">ขยับร่างกายให้อยู่ในกล้อง และใช้ "ปลายนิ้วชี้" แตะค้างเพื่อเลือก</p>
     </div>
 
+    <!-- UI ส่วนออกกำลังกาย -->
+    <div id="exerciseUI">
+        <select id="exerciseSelect">
+            <option value="1" data-type="reps" data-target="10" selected>ท่า 1: นั่งเตะขาไปด้านหน้า 10 ครั้ง</option>
+            <option value="2" data-type="reps" data-target="10">ท่า 2: ยืนงอเข่าไปด้านหลัง 10 ครั้ง</option>
+            <option value="3" data-type="reps" data-target="10">ท่า 3: ยืนกางขาไปด้านข้าง 10 ครั้ง</option>
+            <option value="4" data-type="reps" data-target="20">ท่า 4: ยืนเขย่งส้นเท้าขึ้น 20 ครั้ง</option>
+            <option value="5" data-type="reps" data-target="20">ท่า 5: ยืนกระดกปลายเท้าขึ้น 20 ครั้ง</option>
+            <option value="6" data-type="reps" data-target="10">ท่า 6: ย่อเข่าลงแล้วเหยียดตัวขึ้น 10 ครั้ง</option>
+            <option value="10" data-type="time" data-target="10">ท่า 10: ยืนต่อเท้าค้างไว้ 10 วิ</option>
+            <option value="12" data-type="time" data-target="10">ท่า 12: ยืนขาเดียวค้างไว้ 10 วิ</option>
+            <option value="16" data-type="reps" data-target="10">ท่า 16: นั่งแล้วลุกขึ้นยืน 10 ครั้ง</option>
+        </select>
+        <div class="dashboard-box">
+            <div class="value-display" id="progressValue">0</div>
+            <div class="target-text" id="targetValue">เป้าหมาย: 10 ครั้ง</div>
+        </div>
+        <div class="instruction">
+            <span id="instructionText" style="color: #d32f2f;">กำลังรอกล้อง... หรือยังไม่เห็นเป้าหมาย</span>
+        </div>
+    </div>
+
+    <!-- ส่วนของหน้าจอกล้องและวิดีโอ -->
     <div id="gameWrapper">
         <video id="webcam" autoplay playsinline muted></video>
         <canvas id="output_canvas" width="800" height="600"></canvas>
@@ -112,22 +153,6 @@
         <div id="visibilityWarning">⚠️ ถอยห่างจากกล้องให้เห็นเท้า/เข่า</div>
         
         <div id="loading">กำลังโหลด AI จับการเคลื่อนไหว...</div>
-
-        <div id="exerciseUI">
-            <select id="exerciseSelect">
-                <option value="5" data-type="reps" data-target="10" selected>ท่า 5: กระดกปลายเท้าขึ้น 10 ครั้ง</option>
-                <option value="6" data-type="reps" data-target="10">ท่า 6: งอเข่าเหยียดตัวขึ้น 10 ครั้ง</option>
-                <option value="12" data-type="time" data-target="10">ท่า 12: ยืนขาเดียวค้างไว้ 10 วิ</option>
-                <option value="16" data-type="reps" data-target="10">ท่า 16: นั่งแล้วลุกขึ้นยืน 10 ครั้ง</option>
-            </select>
-            <div class="dashboard-box">
-                <div class="value-display" id="progressValue">0</div>
-                <div class="target-text" id="targetValue">เป้าหมาย: 10 ครั้ง</div>
-            </div>
-            <div class="instruction">
-                <span id="instructionText" style="color: #d32f2f;">กำลังรอกล้อง... หรือยังไม่เห็นเป้าหมาย</span>
-            </div>
-        </div>
     </div>
 
 <script>
@@ -137,7 +162,6 @@
     const loadingScreen = document.getElementById('loading');
     const backBtn = document.getElementById('backBtn');
 
-    // UI ออกกำลังกาย
     const exerciseUI = document.getElementById('exerciseUI');
     const selectBox = document.getElementById('exerciseSelect');
     const progressValue = document.getElementById('progressValue');
@@ -145,7 +169,6 @@
     const warningElement = document.getElementById('visibilityWarning');
     const instructionText = document.getElementById('instructionText');
 
-    // ============ Global State ============
     let gameState = 'MENU'; 
     let selectedGame = null;
     let score = 0;
@@ -156,32 +179,38 @@
     let hoverProgress = 0; 
     let isTransitioning = false; 
 
-    // ============ Exercise State (Otago) ============
+    // ตัวแปรเก็บสถานะการออกกำลังกาย
     let currentMode = "reps"; 
     let target = 10;
     let counter = 0;
     let isHoldingPose = false;
     let startTime = 0;
-    let isDown = false;
+    
+    let isDown = false; 
+    let leftIsDown = false;
+    let rightIsDown = false;
+    let lastRepTime = 0;
 
-    // คำนวณมุมข้อต่อ
     function calculateAngle(a, b, c) {
+        if (!a || !b || !c) return 180;
         const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
         let angle = Math.abs(radians * 180.0 / Math.PI);
         return angle > 180.0 ? 360 - angle : angle;
     }
 
-    // เมื่อเปลี่ยนท่าออกกำลังกาย
     selectBox.addEventListener('change', (e) => {
         const selectedOption = e.target.options[e.target.selectedIndex];
         currentMode = selectedOption.dataset.type;
         target = parseInt(selectedOption.dataset.target);
-        counter = 0; isHoldingPose = false; isDown = false;
+        
+        // รีเซ็ตสถานะทั้งหมดเมื่อเปลี่ยนท่า
+        counter = 0; isHoldingPose = false; 
+        isDown = false; leftIsDown = false; rightIsDown = false; lastRepTime = 0;
+        
         progressValue.innerText = "0";
-        targetValue.innerText = `เป้าหมาย: ${target} ${currentMode === 'time' ? 'วินาที' : (currentMode === 'steps' ? 'ก้าว' : 'ครั้ง')}`;
+        targetValue.innerText = `/ ${target} ${currentMode === 'time' ? 'วินาที' : (currentMode === 'steps' ? 'ก้าว' : 'ครั้ง')}`;
     });
 
-    // ============ Game Data ============
     const pairs = [['🍎','🍅'], ['🐶','🐻'], ['☀️','⭐'], ['🚗','🚕'], ['⚽','🏀']];
     const colorOptions = [
         { name: 'แดง', hex: '#ff4757' }, { name: 'เขียว', hex: '#2ed573' },
@@ -189,16 +218,16 @@
     ];
     let currentTargetWord = null; let currentTargetColor = null;
 
-    // ============ URL ของ Google Sheet ============
     const GOOGLE_SHEET_URL = 'https://script.google.com/macros/s/AKfycbx5ei2W-Wu3r-S7CX0EhSqiTSbwyMSO3l2YQCie5888cZSA9B6ElJgtpUYAG1LjldqMNg/exec'; 
-    // ==========================================================
 
-    // ============ Navigation ============
     function goToMenu() {
         gameState = 'MENU';
         backBtn.style.display = 'none';
         exerciseUI.style.display = 'none';
         warningElement.style.display = 'none';
+        
+        document.querySelector('.header').style.display = 'block'; 
+        
         document.getElementById('mainTitle').innerText = 'AR ประเมินการฟื้นฟู & มินิเกม';
         document.getElementById('subTitle').innerText = 'ใช้นิ้วชี้แตะค้างเพื่อเลือกตัวเลือกที่ต้องการ';
         generateMenu();
@@ -206,11 +235,16 @@
 
     function prepareExercise() {
         gameState = 'EXERCISE';
+        
+        // อัปเดต: รีเซ็ตคะแนนและพลังชีวิต เพื่อป้องกันบัค Game Over เด้งค้าง
+        lives = 3; 
+        score = 0;
+
         backBtn.style.display = 'block';
         exerciseUI.style.display = 'flex';
         selectBox.dispatchEvent(new Event('change'));
-        document.getElementById('mainTitle').innerText = '🏃 ทดสอบท่ากายภาพบำบัด (Otago)';
-        document.getElementById('subTitle').innerText = 'ทำท่าทางให้ครบตามเป้าหมายที่กำหนด';
+        
+        document.querySelector('.header').style.display = 'none'; 
     }
 
     function startGame() {
@@ -230,7 +264,6 @@
         }
     }
 
-    // ============ Level Generators ============
     function generateMenu() {
         gridItems = [
             { id: 'SPOT', x: 200, y: 300, radius: 80, text: '🔍\nจับผิดรูป' },
@@ -272,13 +305,24 @@
         }
     }
 
-    // ============ AI & MediaPipe ============
     const holistic = new Holistic({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${file}`});
     holistic.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
     holistic.onResults(onResults);
 
     const camera = new Camera(videoElement, { onFrame: async () => { await holistic.send({image: videoElement}); }, width: 800, height: 600 });
     camera.start();
+
+    function incrementRep() {
+        const now = Date.now();
+        if (now - lastRepTime > 800) { 
+            if (counter < target) {
+                counter++;
+                progressValue.innerText = counter;
+                checkExerciseComplete();
+            }
+            lastRepTime = now;
+        }
+    }
 
     function onResults(results) {
         if(loadingScreen.style.display !== 'none') {
@@ -290,7 +334,6 @@
         canvasCtx.scale(-1, 1); canvasCtx.translate(-canvasElement.width, 0);
         canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
 
-        // วาดโครงร่าง
         if (results.poseLandmarks) {
             drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, {color: '#44bd32', lineWidth: 4}); 
             drawLandmarks(canvasCtx, results.poseLandmarks, {color: '#fbc531', lineWidth: 2, radius: 3}); 
@@ -298,9 +341,9 @@
         if (results.rightHandLandmarks) drawConnectors(canvasCtx, results.rightHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
         if (results.leftHandLandmarks) drawConnectors(canvasCtx, results.leftHandLandmarks, HAND_CONNECTIONS, {color: '#00CCFF', lineWidth: 3});
         
-        // --- ระบบตรวจจับท่าทาง (Exercise Logic) ---
         if (gameState === 'EXERCISE' && results.poseLandmarks && !isTransitioning) {
-            const hip = results.poseLandmarks[24]; const knee = results.poseLandmarks[26];
+            const leftHip = results.poseLandmarks[23]; const rightHip = results.poseLandmarks[24];
+            const leftKnee = results.poseLandmarks[25]; const rightKnee = results.poseLandmarks[26];
             const leftAnkle = results.poseLandmarks[27]; const rightAnkle = results.poseLandmarks[28];
             const leftHeel = results.poseLandmarks[29]; const rightHeel = results.poseLandmarks[30];
             const leftToe = results.poseLandmarks[31]; const rightToe = results.poseLandmarks[32];
@@ -308,89 +351,132 @@
             const exerciseVal = selectBox.value;
             let isBodyVisible = false;
 
-            if (exerciseVal === "5") {
-                if (leftHeel && leftToe && (leftHeel.visibility > 0.4 || rightHeel.visibility > 0.4)) isBodyVisible = true;
-            } else if (exerciseVal === "6" || exerciseVal === "16") {
-                if (hip && knee && leftAnkle && (knee.visibility > 0.5)) isBodyVisible = true;
-            } else {
-                if (leftAnkle && rightAnkle && (leftAnkle.visibility > 0.5)) isBodyVisible = true;
-            }
+            const hasLeftLeg = leftHip && leftKnee && leftAnkle && leftKnee.visibility > 0.4;
+            const hasRightLeg = rightHip && rightKnee && rightAnkle && rightKnee.visibility > 0.4;
+            
+            if (hasLeftLeg || hasRightLeg) isBodyVisible = true;
 
             if (!isBodyVisible) {
                 warningElement.style.display = "block";
-                instructionText.innerText = "กำลังรอกล้อง... ถอยห่างให้เห็นข้อเท้า/เข่า";
+                instructionText.innerText = "กำลังรอกล้อง... ถอยห่างให้เห็นข้อเท้า/เข่าอย่างน้อย 1 ข้าง";
                 instructionText.style.color = "#d32f2f";
             } else {
                 warningElement.style.display = "none";
-                instructionText.innerText = "เยี่ยมมาก! ขยับร่างกายตามท่าได้เลย";
+                instructionText.innerText = "เยี่ยมมาก! ขยับร่างกายตามท่าได้เลย (แนะนำตั้งกล้องเฉียง 45 องศา)";
                 instructionText.style.color = "#2e7d32";
                 
-                // โหมดนับครั้ง
+                const leftKneeAngle = hasLeftLeg ? calculateAngle(leftHip, leftKnee, leftAnkle) : 180;
+                const rightKneeAngle = hasRightLeg ? calculateAngle(rightHip, rightKnee, rightAnkle) : 180;
+
                 if (currentMode === "reps") {
-                    if (exerciseVal === "5") {
-                        const leftFootSize = Math.hypot(leftHeel.x - leftToe.x, leftHeel.y - leftToe.y) + 0.001;
-                        const rightFootSize = Math.hypot(rightHeel.x - rightToe.x, rightHeel.y - rightToe.y) + 0.001;
-                        const leftLift = (leftHeel.y - leftToe.y) / leftFootSize;
-                        const rightLift = (rightHeel.y - rightToe.y) / rightFootSize;
-                        
-                        if (leftLift > 0.15 || rightLift > 0.15) isDown = true;
-                        else if (isDown && leftLift < 0.05 && rightLift < 0.05) {
-                            isDown = false;
-                            if (counter < target) { counter++; progressValue.innerText = counter; checkExerciseComplete(); }
+                    if (exerciseVal === "1") {
+                        if (hasLeftLeg) {
+                            if (leftKneeAngle < 130) leftIsDown = true; 
+                            if (leftIsDown && leftKneeAngle > 150) { leftIsDown = false; incrementRep(); }
                         }
-                    } else if (exerciseVal === "6" || exerciseVal === "16") {
-                        const kneeAngle = calculateAngle(hip, knee, leftAnkle);
-                        if (kneeAngle < 130) isDown = true;
-                        if (isDown && kneeAngle > 165) {
-                            isDown = false;
-                            if (counter < target) { counter++; progressValue.innerText = counter; checkExerciseComplete(); }
+                        if (hasRightLeg) {
+                            if (rightKneeAngle < 130) rightIsDown = true; 
+                            if (rightIsDown && rightKneeAngle > 150) { rightIsDown = false; incrementRep(); }
+                        }
+                    }
+                    else if (exerciseVal === "2") {
+                        if (hasLeftLeg) {
+                            if (leftKneeAngle > 160) leftIsDown = true; 
+                            if (leftIsDown && leftKneeAngle < 130) { leftIsDown = false; incrementRep(); }
+                        }
+                        if (hasRightLeg) {
+                            if (rightKneeAngle > 160) rightIsDown = true; 
+                            if (rightIsDown && rightKneeAngle < 130) { rightIsDown = false; incrementRep(); }
+                        }
+                    }
+                    else if (exerciseVal === "3") {
+                        if (leftAnkle && rightAnkle) {
+                            const dist = Math.abs(leftAnkle.x - rightAnkle.x);
+                            if (dist < 0.12) isDown = true; 
+                            if (isDown && dist > 0.18) { 
+                                 isDown = false; incrementRep();
+                            }
+                        }
+                    }
+                    else if (exerciseVal === "4") {
+                        if (leftHeel && leftToe && rightHeel && rightToe) {
+                            const leftDiff = leftToe.y - leftHeel.y;
+                            const rightDiff = rightToe.y - rightHeel.y;
+                            if (leftDiff < 0.02 && rightDiff < 0.02) isDown = true; 
+                            if (isDown && (leftDiff > 0.06 || rightDiff > 0.06)) { 
+                                 isDown = false; incrementRep();
+                            }
+                        }
+                    }
+                    else if (exerciseVal === "5") {
+                        if (leftHeel && leftToe && rightHeel && rightToe) {
+                            const leftDiff = leftHeel.y - leftToe.y;
+                            const rightDiff = rightHeel.y - rightToe.y;
+                            if (leftDiff < 0.02 && rightDiff < 0.02) isDown = true; 
+                            if (isDown && (leftDiff > 0.05 || rightDiff > 0.05)) { 
+                                 isDown = false; incrementRep();
+                            }
+                        }
+                    }
+                    else if (exerciseVal === "6") {
+                        const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+                        if (avgKneeAngle > 160) isDown = true; 
+                        if (isDown && avgKneeAngle < 140) { 
+                             isDown = false; incrementRep();
+                        }
+                    }
+                    else if (exerciseVal === "16") {
+                        const avgKneeAngle = (leftKneeAngle + rightKneeAngle) / 2;
+                        if (avgKneeAngle < 120) isDown = true; 
+                        if (isDown && avgKneeAngle > 160) { 
+                             isDown = false; incrementRep();
                         }
                     }
                 } 
-                // โหมดจับเวลา
                 else if (currentMode === "time") {
-                    if (leftAnkle && rightAnkle) {
-                        const heightDiff = Math.abs(leftAnkle.y - rightAnkle.y);
-                        if (heightDiff > 0.08 || exerciseVal === "12") {
-                            if (!isHoldingPose) { isHoldingPose = true; startTime = Date.now(); } 
-                            else {
-                                let elapsed = Math.floor((Date.now() - startTime) / 1000);
-                                if (elapsed <= target) {
-                                    counter = elapsed; progressValue.innerText = counter;
-                                    if(counter >= target) checkExerciseComplete();
-                                }
-                            }
-                        } else { isHoldingPose = false; }
+                    if (exerciseVal === "10") {
+                        if (leftAnkle && rightAnkle) {
+                            const xDist = Math.abs(leftAnkle.x - rightAnkle.x);
+                            if (xDist < 0.08) { 
+                                if (!isHoldingPose) { isHoldingPose = true; startTime = Date.now(); } 
+                            } else { isHoldingPose = false; }
+                        }
+                    }
+                    else if (exerciseVal === "12") {
+                        if (leftAnkle && rightAnkle) {
+                            const heightDiff = Math.abs(leftAnkle.y - rightAnkle.y);
+                            if (heightDiff > 0.08) { 
+                                if (!isHoldingPose) { isHoldingPose = true; startTime = Date.now(); } 
+                            } else { isHoldingPose = false; }
+                        }
+                    }
+
+                    if (isHoldingPose) {
+                        let elapsed = Math.floor((Date.now() - startTime) / 1000);
+                        if (elapsed <= target) {
+                            counter = elapsed; progressValue.innerText = counter;
+                            if(counter >= target) checkExerciseComplete();
+                        }
                     }
                 }
             }
         }
         
-        canvasCtx.restore(); // พลิกภาพกลับสำหรับการวาด UI
+        canvasCtx.restore(); 
 
         // ==========================================
-        // การจัดการจบเกม (GAME OVER LOGIC - แก้ไขแล้ว)
-        // ==========================================
-        if (lives <= 0 && gameState !== 'MENU' && gameState !== 'GAMEOVER') {
-            // 1. เปลี่ยน State เป็น GAMEOVER ทันที เพื่อไม่ให้เข้ามาใน if นี้ซ้ำ
+        // อัปเดต: ให้การจบเกมทำงานเฉพาะในโหมดมินิเกมเท่านั้น ป้องกันบัคหน้าจอจบเกมเด้งข้ามโหมด
+        if (lives <= 0 && (gameState === 'SPOT' || gameState === 'STROOP')) {
             gameState = 'GAMEOVER';
-            
-            // 2. เรียกเซฟข้อมูลแค่ 1 ครั้งถ้วน
             saveScoreToGoogleSheet(score);
-            
-            // 3. ตั้งเวลา 3 วินาที กลับเมนูหลัก
             setTimeout(() => { goToMenu(); }, 3000);
         }
 
-        // ถ้าระบบอยู่ในสถานะ GAMEOVER ให้วาดหน้าจอจบเกมแล้วหยุดทำงานส่วนอื่น
         if (gameState === 'GAMEOVER') {
             drawGameOverScreen();
             return;
         }
 
-
-        // ==========================================
-        // การวาด UI เกมและการจิ้ม
         // ==========================================
         if (gameState !== 'EXERCISE') {
             let activeFinger = null;
@@ -443,7 +529,7 @@
             instructionText.style.color = "#1e90ff";
             setTimeout(() => {
                 isTransitioning = false;
-                goToMenu(); // ทำเสร็จแล้วกลับเมนูหลัก ไม่เข้าเกม
+                goToMenu(); 
             }, 2000);
         }
     }
@@ -524,30 +610,17 @@
         canvasCtx.fillText(`พลังชีวิต: ${hearts}`, canvasElement.width - 20, 40);
     }
 
-    // ============ ฟังก์ชันบันทึกคะแนนลง Google Sheet ============
     function saveScoreToGoogleSheet(newScore) {
-        const data = {
-            game: selectedGame,
-            score: newScore
-        };
-        
-        console.log("กำลังส่งข้อมูล...", data);
-
+        const data = { game: selectedGame, score: newScore };
         fetch(GOOGLE_SHEET_URL, {
             method: 'POST',
-            mode: 'no-cors', // ใช้โหมดนี้เพื่อไม่ให้เบราว์เซอร์บล็อก
+            mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(data)
-        })
-        .then(() => {
-            console.log("✅ ระบบได้ทำการสั่งส่งข้อมูลไปยัง Google Sheet เรียบร้อยแล้ว!");
-        })
-        .catch(error => {
-            console.error("❌ เกิดข้อผิดพลาดในการส่งข้อมูล:", error);
-        });
+        }).then(() => console.log("✅ สั่งส่งข้อมูลไปยัง Google Sheet เรียบร้อยแล้ว!"))
+          .catch(error => console.error("❌ เกิดข้อผิดพลาด:", error));
     }
 
-    // เปลี่ยนชื่อและหน้าที่จาก drawGameOver เป็นวาดหน้าจออย่างเดียว
     function drawGameOverScreen() {
         canvasCtx.fillStyle = 'rgba(0, 0, 0, 0.85)'; canvasCtx.fillRect(0, 0, canvasElement.width, canvasElement.height);
         canvasCtx.fillStyle = '#ff4757'; canvasCtx.font = 'bold 60px Kanit'; canvasCtx.textAlign = 'center';
